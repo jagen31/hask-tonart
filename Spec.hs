@@ -16,6 +16,9 @@ main = hspec $ do
       evaluate (mergeCoords (2, 4, voices ["S", "A"]) (1, 2, voices ["T"]))
         `shouldThrow` anyException
 
+    it "inherits parent when voices are empty" $
+      mergeCoords (2, 4, voices ["S", "A"]) (1, 2, voices []) `shouldBe` (3, 4, voices ["S", "A"])
+
   describe "Music.topExprToComp" $ do
     it "translates an empty expression" $
       topExprToComp (TopExpr []) `shouldBe` emptyComp
@@ -48,6 +51,23 @@ main = hspec $ do
                 ((4, 8, voices ["S", "A"]), [Interval 4]), 
                 ((4, 6, voices ["S"]), [Note E.Fs 4]), 
                 ((6, 8, voices ["A"]), [Note E.D 4])]
+
+    it "handles precompiled expressions" $
+      let example =
+            TopExpr [((4, 6, voices ["S"]), [Expr $ Note E.C 4]),
+                     ((4, 8, voices ["S", "A"]), 
+                      [Expr $ Interval 4,
+                       In ((0, 2, voices ["S"]), [Expr $ Note E.Fs 4]),
+                       In ((2, 4, voices ["A"]), 
+                           [EComp $ comp [((0, 1, voices []), [Note E.D 3]), 
+                                          ((1, 2, voices []), [Note E.E 3])]])])] in
+        topExprToComp example `shouldBe`
+          comp [((4, 6, voices ["S"]), [Note E.C 4]), 
+                ((4, 8, voices ["S", "A"]), [Interval 4]), 
+                ((4, 6, voices ["S"]), [Note E.Fs 4]), 
+                ((6, 7, voices ["A"]), [Note E.D 3]),
+                ((7, 8, voices ["A"]), [Note E.E 3])]
+      
 
   describe "Music.compToEuterpea" $ do
 

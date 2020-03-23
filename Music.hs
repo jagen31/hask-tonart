@@ -5,7 +5,7 @@ module Music
    voices,
    In, 
    AtomicExpr(Note, Interval),
-   Expr(In, Expr), 
+   Expr(In, EComp, Expr), 
    TopExpr(TopExpr), 
    Comp(Comp),
    comp,
@@ -35,7 +35,7 @@ data AtomicExpr = Note E.PitchClass Int
                 | Interval Int
   deriving (Eq, Show, Ord)
 
-data Expr = In In | Expr AtomicExpr deriving (Eq, Show)
+data Expr = In In | EComp Comp | Expr AtomicExpr deriving (Eq, Show)
 newtype TopExpr = TopExpr [In] deriving (Eq, Show)
 
 data Comp = Comp [Coord] (Map.Map Coord [AtomicExpr]) deriving (Eq, Show)
@@ -59,8 +59,12 @@ mergeCoords (ps, pe, pvs) (cs, ce, cvs) =
   case () of _ 
               | end > pe -> throw MusicException
               | not (cvs `Set.isSubsetOf` pvs) -> throw MusicException
-              | otherwise -> (cs + ps, end, cvs)
+              | otherwise -> (cs + ps, end, if (Set.null cvs) then pvs else cvs)
   where end = ce + ps
+
+offsetComp :: Coord -> Comp -> Comp
+offsetComp pc (Comp o inner) = 
+  Comp (map (mergeCoords pc) o) $ Map.mapKeys (mergeCoords pc) inner
 
 instance Semigroup Comp where 
   (<>) (Comp lOrder lMap) (Comp rOrder rMap) = 
@@ -71,6 +75,7 @@ instance Monoid Comp where mempty = emptyComp
 exprToComp :: Comp -> Coord -> Expr -> Comp
 exprToComp comp pc (In (c, exprs)) = 
   mconcat (map (exprToComp comp (mergeCoords pc c)) exprs)
+exprToComp comp pc (EComp comp') = comp <> offsetComp pc comp'
 exprToComp comp c (Expr e) = Comp [c] $ Map.fromListWith (++) [(c, [e])]
 
 topExprToComp :: TopExpr -> Comp
