@@ -72,16 +72,16 @@ instance Semigroup Comp where
 
 instance Monoid Comp where mempty = emptyComp
 
-exprToComp :: Comp -> Coord -> Expr -> Comp
-exprToComp comp pc (In (c, exprs)) = 
-  mconcat (map (exprToComp comp (mergeCoords pc c)) exprs)
-exprToComp comp pc (EComp comp') = comp <> offsetComp pc comp'
-exprToComp comp c (Expr e) = Comp [c] $ Map.fromListWith (++) [(c, [e])]
+exprToComp :: Coord -> Expr -> Comp
+exprToComp pc (In (c, exprs)) = 
+  mconcat (map (exprToComp (mergeCoords pc c)) exprs)
+exprToComp pc (EComp comp') = offsetComp pc comp'
+exprToComp c (Expr e) = Comp [c] $ Map.fromListWith (++) [(c, [e])]
 
 topExprToComp :: TopExpr -> Comp
 topExprToComp (TopExpr ins) = 
   mconcat (map go ins) where 
-    go (c, exprs) = mconcat (map (exprToComp emptyComp c) exprs)
+    go (coord, exprs) = mconcat (map (exprToComp coord) exprs)
 
 compToScore :: Comp -> Score
 compToScore (Comp _ comp) = 
